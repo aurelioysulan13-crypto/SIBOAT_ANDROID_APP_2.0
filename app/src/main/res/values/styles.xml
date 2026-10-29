@@ -1,0 +1,10 @@
+<resources>
+    <style name="Theme.SIBOAT" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:colorAccent">@color/siboat_blue</item>
+        <item name="android:navigationBarColor">#080D24</item>
+        <item name="android:statusBarColor">#080D24</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
