@@ -1,39 +1,55 @@
-name: Build SIBOAT Android APK
+name: Build SIBOAT Android app (debug APK)
 
+# Builds the installable SIBOAT Android app from the dashboard stored at app/src/main/assets/index.html.
+# That single file is the only dashboard source. Nothing else in the repository can override it.
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [ main, master ]
+    paths: [ "app/**", "build.gradle", "settings.gradle", "gradle.properties", "tools/**", ".github/workflows/build-android.yml" ]
 
-permissions:
-  contents: read
+concurrency:
+  group: siboat-android-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
+  apk:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 30
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
+      - name: Check the dashboard and the signing key
+        run: |
+          set -euo pipefail
+          test -s app/src/main/assets/index.html || { echo "::error::app/src/main/assets/index.html is missing or empty. Upload the dashboard there and name it exactly index.html"; exit 1; }
+          test -s app/siboat-debug.keystore || { echo "::error::app/siboat-debug.keystore is missing. Upload it into the app folder."; exit 1; }
+          grep -q "SIBOAT_ANDROID_BLE" app/src/main/assets/index.html || { echo "::error::The dashboard has no Bluetooth bridge hook"; exit 1; }
+          grep -q "SIBOAT_ANDROID_SERIAL_DATA" app/src/main/assets/index.html || { echo "::error::The dashboard has no USB serial callback"; exit 1; }
+          grep -q "SIBOAT_ANDROID_INSETS" app/src/main/assets/index.html || { echo "::error::This is not the newest dashboard (no adaptive status bar inset). Upload the newest index.html"; exit 1; }
+          ls -l app/src/main/assets/index.html app/siboat-debug.keystore
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
+      - name: Bundle the Supabase client for offline start (optional)
+        continue-on-error: true
+        run: bash tools/fetch_vendor.sh app/src/main/assets/vendor
+
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.9' }
 
       - name: Build debug APK
         run: gradle --no-daemon assembleDebug
 
-      - name: Upload debug APK
-        uses: actions/upload-artifact@v4
+      - name: Name the APK
+        run: |
+          mkdir -p out
+          cp app/build/outputs/apk/debug/app-debug.apk out/SIBOAT_ANDROID_APP_DEBUG.apk
+          ls -l out
+
+      - uses: actions/upload-artifact@v6
         with:
-          name: SIBOAT-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: SIBOAT_ANDROID_APP_DEBUG
+          path: out/SIBOAT_ANDROID_APP_DEBUG.apk
           if-no-files-found: error
