@@ -5,27 +5,25 @@ plugins {
 android {
     namespace 'com.siboat.controller'
     compileSdk 35
-
-    defaultConfig {
-        applicationId 'com.siboat.controller'
-        minSdk 23
-        targetSdk 35
-        versionCode 1
-        versionName '1.0.0'
-    }
-
-    buildTypes {
+    defaultConfig { applicationId 'com.siboat.controller'; minSdk 23; targetSdk 35; versionCode 3; versionName '1.2.0' }
+    // One fixed signing key for every build. Without it GitHub creates a new random key on each run and Android
+    // refuses to install a newer build over an older one ("App not installed").
+    signingConfigs {
         debug {
-            minifyEnabled false
+            storeFile file('siboat-debug.keystore')
+            storePassword 'siboat123'
+            keyAlias 'siboatdebug'
+            keyPassword 'siboat123'
         }
-        release {
-            minifyEnabled false
-            shrinkResources false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
+    }
+    buildTypes {
+        release { minifyEnabled false; shrinkResources false; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' }
+        debug { minifyEnabled false; signingConfig signingConfigs.debug }
     }
 }
-
+configurations.all {
+    resolutionStrategy.eachDependency { details -> if (details.requested.group == 'org.jetbrains.kotlin') { details.useVersion '1.8.22' } }
+}
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'androidx.webkit:webkit:1.12.1'
